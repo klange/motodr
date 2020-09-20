@@ -1,11 +1,15 @@
 #!/usr/bin/env python
-#
-# Author: Sergei Franco (sergei at sergei.nz); K. Lange (klange at toaruos.org)
-# License: GPL3 
-# Warranty: NONE! Use at your own risk!
-# Disclaimer: I am no programmer!
-# Description: this script will crudely extract embedded GPS data from Novatek generated MP4 files.
-#
+"""
+Novatek dash cam GPS coordinate decoder.
+
+Changelog:
+    2020/09/20 - Add support for Mitsuba EDR devices. (klange)
+
+Author: K. Lange (klange at toaruos.org)
+Original author: Sergei Franco (sergei at sergei.nz)
+License: GPL3
+
+"""
 import os, struct, sys, argparse, glob
 
 gpx = ''
@@ -108,63 +112,6 @@ def get_gps_atom_info(eight_bytes):
     atom_pos,atom_size=struct.unpack('>II',eight_bytes)
     return int(atom_pos),int(atom_size)
 
-ind = 0
-
-expected = [
-    35.185600, # 4
-    35.185600,
-    35.185600,
-    35.185600,
-    35.185596, # 3
-    35.185596,
-    35.185596,
-    35.185593, # 3
-    35.185593,
-    35.185593,
-    35.185600, # 1
-    35.185619, # 1
-    35.185669, # 1
-    35.185738,
-    35.185818,
-    35.185925,
-    35.186043,
-    35.186172,
-    35.186295,
-    35.186413,
-    35.186531,
-    35.186653,
-    35.186783,
-    35.186909,
-    35.186909,
-    35.187160,
-    35.187294,
-    35.187420,
-    35.187542,
-    35.187672,
-    35.187809,
-    35.187954,
-    35.188110,
-    35.188278,
-    35.188454,
-    35.188637,
-    35.188828,
-    35.189022,
-    35.189224,
-]
-
-expected_y = [
-    139.005692,
-    139.005692,
-    139.005692,
-    139.005692,
-    139.005676,
-    139.005676,
-    139.005676,
-    139.005676,
-    139.005676,
-    139.005676,
-]
-
 def get_gps_atom(gps_atom_info,f):
     global deobfuscate, ind
     atom_pos,atom_size=gps_atom_info
@@ -213,28 +160,22 @@ def get_gps_atom(gps_atom_info,f):
         bearing = 0
     elif data[12] == 108:
         #print("Found a Mistuba GPS packet", atom_size)
-        time = '0000-00-00T00:00:00Z'
+        time = '0000-00-00T00:00:00Z' # TODO
         latitude = 0
         longitude = 0
-        speed = 0.0
-        bearing = 0
-        _x = data[0x58:0x5c]
+        speed = 0.0 # TODO
+        bearing = 0 # Don't think this stores bearing
+        _x = data[0x58:0x5c] # Making some assumptions on this being at a fixed offset
         _y = data[0x60:0x64]
         x = struct.unpack_from('<f',_x)[0]
         y = struct.unpack_from('<f',_y)[0]
-        x_ = ''.join(['{:02x}'.format(i) for i in _x])
-        y_ = ''.join(['{:02x}'.format(i) for i in _y])
 
         if (x == 0):
+            # Skip this point, no GPS lock
             return
 
-        latitude = int(x / 100) #* 1.66684080670954 - 23.3394477012021
-        longitude = int(y / 100) #* 1.63840000015833 - 88.7375080220077
-        latitude += ((x / 100) - latitude) * 1.666666666
-        longitude += ((y / 100) - longitude) * 1.666666666
-        ind += 1
-        #print(chr(data[0x54]), x_, x,chr(data[0x5c]), y_, y,) #, diff_y)
-        #print(''.join(['{:02x}'.format(d) for d in data[0x58:].rstrip(b'\x00')]))
+        latitude = fix_coordinates(str(data[0x54]), x)
+        longitude = fix_coordinates(str(data[0x5c]), y)
     else:
         if atom_size < 56:
             print("Skipping too small atom %d<56." % atom_size)

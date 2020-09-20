@@ -1,7 +1,7 @@
-# Mitsuwa EDR GPS reader
+# Mitsuba EDR GPS reader
 
-Tool for extracting GPS data from videos created by Mitsuwa's motorcycle dash cams.
+Tool for extracting GPS data from videos created by Mitsuba's motorcycle dash cams.
 
-Based on a previous tool for other NOVATEK dashcam modules, with yet another obfuscation technique.
+Based on a previous tool for other NOVATEK dashcam modules.
 
 ![](sample.png)
